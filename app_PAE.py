@@ -16,6 +16,11 @@ Original file is located at
 #!sudo apt install tesseract-ocr -y
 #!pip install easyocr
 
+import os
+if not os.path.exists("/usr/bin/tesseract"):
+    st.warning("⚠️ Tesseract no está instalado en la ruta esperada.")
+
+
 import re
 import pytesseract
 from pdf2image import convert_from_path
