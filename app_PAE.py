@@ -17,8 +17,6 @@ Original file is located at
 #!pip install easyocr
 
 import re
-
-pytesseract.pytesseract.tesseract_cmd = "/usr/bin/tesseract"
 import pytesseract
 from pdf2image import convert_from_path
 import cv2
