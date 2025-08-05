@@ -9,12 +9,12 @@ Original file is located at
 # Instalación de paquetes
 """
 
-!pip install pdf2image
-!apt-get install poppler-utils -y
-!pip install pytesseract
-!sudo apt update
-!sudo apt install tesseract-ocr -y
-!pip install easyocr
+#!pip install pdf2image
+#!apt-get install poppler-utils -y
+#!pip install pytesseract
+#!sudo apt update
+#!sudo apt install tesseract-ocr -y
+#!pip install easyocr
 
 import re
 import pytesseract
