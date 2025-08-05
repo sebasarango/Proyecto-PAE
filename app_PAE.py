@@ -26,11 +26,12 @@ import pytesseract
 from pdf2image import convert_from_path
 import cv2
 import numpy as np
-from google.colab.patches import cv2_imshow
 from PIL import Image
 import pandas as pd
 import matplotlib.pyplot as plt
 import easyocr
+import streamlit as st
+import tempfile
 
 """# Primera página
 
@@ -486,12 +487,6 @@ def obtener_segunda_tabla(image, rotation=270):
 
     alto, ancho, _ = tabla_recortada_aux.shape
 
-    '''plt.figure(figsize=(12, 8))
-    plt.imshow(cv2.cvtColor(tabla_recortada_aux, cv2.COLOR_BGR2RGB))  # conversión BGR a RGB para mostrar bien en matplotlib
-    plt.title("Tabla detectada (tabla_recortada_aux)")
-    plt.axis("on")
-    plt.show()'''
-
     # Recorte de una zona específica dentro de la tabla detectada automáticamente
     # Define tus límites relativos a la tabla detectada (no a la imagen original)
     x1, x2 = 530, 2100   # columnas (ancho)
@@ -595,7 +590,6 @@ def construir_tabla_1_pandas(image, area_minima=2500, rotation=270):
             #celda_bin = cv2.erode(celda_bin, kernel, iterations=2)
             #celda_bin = cv2.morphologyEx(celda_bin, cv2.MORPH_CLOSE, kernel, iterations=2)
             #celda_bin = cv2.dilate(celda_bin, kernel, iterations=1)
-            cv2_imshow(celda_bin) #Mostrar la celda transformada'''
 
             # --- OCR ---
             texto = pytesseract.image_to_string(celda_bin, config=custom_config)
@@ -673,7 +667,6 @@ def construir_tabla_2_pandas(image, area_minima=2500, rotation=270):
           #celda_bin = cv2.erode(celda_bin, kernel, iterations=1)
           #celda_bin = cv2.morphologyEx(celda_bin, cv2.MORPH_CLOSE, kernel, iterations=1)
           #celda_bin = cv2.dilate(celda_bin, kernel, iterations=1) #Esta es la que he estado usando
-          cv2_imshow(celda_bin) #Mostrar la celda transformada
 
           # --- OCR ---
           texto = pytesseract.image_to_string(celda_bin, config=custom_config)
@@ -821,34 +814,36 @@ def get_best_grid_X_numbers(image):
 # Commented out IPython magic to ensure Python compatibility.
 # %pip install streamlit
 
-import streamlit as st
-import tempfile
 
-# --- Interfaz ---
+
+# Título de la app
 st.title("🧾 Extracción de Tablas desde PDF")
 
+# Subir archivo PDF
 uploaded_file = st.file_uploader("Por favor, cargue su archivo PDF", type=["pdf"])
 
+# Ingresar grados de rotación
+rotation = st.number_input("Rotación de la imagen (grados)", min_value=0, max_value=360, value=270, step=90)
+
 if uploaded_file:
-    # Convertir PDF a imágenes
     with st.spinner("Convirtiendo PDF a imágenes..."):
-        images = convert_from_bytes(uploaded_file.read())
+        images = convert_from_bytes(uploaded_file.read(), dpi=300)
 
     st.success(f"✅ Se extrajeron {len(images)} página(s)")
 
-    # Permitir elegir una página
+    # Seleccionar página
     page_index = st.number_input("Selecciona la página (comenzando desde 1)", min_value=1, max_value=len(images), step=1) - 1
-
     image = images[page_index]
     st.image(image, caption=f"Vista previa - Página {page_index + 1}", use_column_width=True)
 
-    # Convertir a formato OpenCV
+    # Convertir imagen a OpenCV
     image_cv = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
+    # Procesar tablas
     if st.button("📊 Procesar tablas"):
         try:
-            df1 = construir_tabla_1_pandas(image_cv)
-            df2 = construir_tabla_2_pandas(image_cv)
+            df1 = construir_tabla_1_pandas(image_cv, rotation=rotation)
+            df2 = construir_tabla_2_pandas(image_cv, rotation=rotation)
 
             st.subheader("📋 Tabla 1")
             st.dataframe(df1)
@@ -856,13 +851,14 @@ if uploaded_file:
             st.subheader("📋 Tabla 2")
             st.dataframe(df2)
 
-            # Exportar como Excel opcional
+            # Exportar a Excel
             with st.expander("⬇ Descargar resultados"):
                 with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmpfile:
                     with pd.ExcelWriter(tmpfile.name) as writer:
                         df1.to_excel(writer, sheet_name="Tabla1", index=False)
                         df2.to_excel(writer, sheet_name="Tabla2", index=False)
                     st.download_button("📥 Descargar Excel", data=open(tmpfile.name, 'rb').read(), file_name="tablas_extraidas.xlsx")
+
         except Exception as e:
             st.error(f"❌ Error al procesar: {e}")
 
